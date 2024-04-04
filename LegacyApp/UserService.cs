@@ -4,7 +4,20 @@ namespace LegacyApp
 {
     public class UserService
     {
-        public bool AddUser(string firstName, string lastName, string email, DateTime dateOfBirth, int clientId)
+        private static int _minUserAge = 21;
+        
+        private int CalculateAge(DateTime dateOfBirth)
+        {
+            var now = DateTime.Now;
+            int age = now.Year - dateOfBirth.Year;
+            
+            if (now.Month < dateOfBirth.Month || (now.Month == dateOfBirth.Month && now.Day < dateOfBirth.Day))
+                age--;
+
+            return age;
+        }
+        
+        private bool ValidateInput(string firstName, string lastName, string email, DateTime dateOfBirth)
         {
             if (string.IsNullOrEmpty(firstName) || string.IsNullOrEmpty(lastName))
             {
@@ -16,53 +29,45 @@ namespace LegacyApp
                 return false;
             }
 
-            var now = DateTime.Now;
-            int age = now.Year - dateOfBirth.Year;
-            if (now.Month < dateOfBirth.Month || (now.Month == dateOfBirth.Month && now.Day < dateOfBirth.Day)) age--;
+            int age = CalculateAge(dateOfBirth);
 
-            if (age < 21)
+            if (age < _minUserAge)
             {
                 return false;
             }
+
+            return true;
+        }
+        
+        public bool AddUser(string firstName, string lastName, string email, DateTime dateOfBirth, int clientId)
+        {
+            bool isInputCorrect = ValidateInput(firstName, lastName, email, dateOfBirth);
+
+            if (!isInputCorrect)
+                return false;
 
             var clientRepository = new ClientRepository();
             var client = clientRepository.GetById(clientId);
+            
+            var user = new User(firstName, lastName, email, dateOfBirth, client);
 
-            var user = new User
-            {
-                Client = client,
-                DateOfBirth = dateOfBirth,
-                EmailAddress = email,
-                FirstName = firstName,
-                LastName = lastName
-            };
 
-            if (client.Type == "VeryImportantClient")
+            if (client.Type == ClientType.VeryImportantClient)
             {
-                user.HasCreditLimit = false;
+                user.CreditLimit = null;
             }
-            else if (client.Type == "ImportantClient")
+            else if (client.Type == ClientType.ImportantClient)
             {
-                using (var userCreditService = new UserCreditService())
+                user.CreditLimit *= 2;
+            }
+
+
+            if (user.CreditLimit != null)
+            {
+                if (user.CreditLimit < 500)
                 {
-                    int creditLimit = userCreditService.GetCreditLimit(user.LastName);
-                    creditLimit = creditLimit * 2;
-                    user.CreditLimit = creditLimit;
+                    return false;
                 }
-            }
-            else
-            {
-                user.HasCreditLimit = true;
-                using (var userCreditService = new UserCreditService())
-                {
-                    int creditLimit = userCreditService.GetCreditLimit(user.LastName);
-                    user.CreditLimit = creditLimit;
-                }
-            }
-
-            if (user.HasCreditLimit && user.CreditLimit < 500)
-            {
-                return false;
             }
 
             UserDataAccess.AddUser(user);

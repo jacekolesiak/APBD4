@@ -45,7 +45,7 @@ namespace LegacyApp
             {
                 using (var userCreditService = new UserCreditService())
                 {
-                    int creditLimit = userCreditService.GetCreditLimit(user.LastName, user.DateOfBirth);
+                    int creditLimit = userCreditService.GetCreditLimit(user.LastName);
                     creditLimit = creditLimit * 2;
                     user.CreditLimit = creditLimit;
                 }
@@ -55,7 +55,7 @@ namespace LegacyApp
                 user.HasCreditLimit = true;
                 using (var userCreditService = new UserCreditService())
                 {
-                    int creditLimit = userCreditService.GetCreditLimit(user.LastName, user.DateOfBirth);
+                    int creditLimit = userCreditService.GetCreditLimit(user.LastName);
                     user.CreditLimit = creditLimit;
                 }
             }
